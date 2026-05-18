@@ -96,10 +96,15 @@ class NumberType extends Type {
 class PointerType extends Type {
 	get tsType() { return "ArrayBuffer"; }
 	writeArgument(file, i) {
-		file.write(`(${ this.name })*arg${ i }`);
+		file.write(`(${ this.name })arg${ i }`);
 	}
 	writeArgumentConversion(file, i) {
-		file.line(`void** arg${ i } = XS->toArrayBufferHandle(the, mxArgv(${ i }), 0);`);
+		file.line(`txInteger arg${ i }_len = XS->getArrayBufferLength(the, mxArgv(${ i }));`);
+		file.line(`void* arg${ i } = malloc(arg${ i }_len ? arg${ i }_len : 1);`);
+		file.line(`XS->toArrayBufferCopy(the, mxArgv(${ i }), arg${ i }, arg${ i }_len);`);
+	}
+	writeArgumentCleanup(file, i) {
+		file.line(`free(arg${ i });`);
 	}
 }
 
@@ -111,10 +116,15 @@ class PointerSizeType extends Type {
 		this.count = parseInt(name.slice(bracket + 1, -1));
 	}
 	writeArgument(file, i) {
-		file.write(`(${ this.name })*arg${ i }`);
+		file.write(`(${ this.name })arg${ i }`);
 	}
 	writeArgumentConversion(file, i) {
-		file.line(`void** arg${ i } = XS->toArrayBufferHandle(the, mxArgv(${ i }), ${ this.count } * sizeof(${ this.name.slice(0, -1) }));`);
+		const size = `${ this.count } * sizeof(${ this.name.slice(0, -1) })`;
+		file.line(`void* arg${ i } = malloc(${ size });`);
+		file.line(`XS->toArrayBufferCopy(the, mxArgv(${ i }), arg${ i }, ${ size });`);
+	}
+	writeArgumentCleanup(file, i) {
+		file.line(`free(arg${ i });`);
 	}
 	writeResultConversion(file) {
 		file.line("if (result) {");
@@ -133,10 +143,15 @@ class PointerSizeType extends Type {
 class StringType extends Type {
 	get tsType() { return "string"; }
 	writeArgument(file, i) {
-		file.write(`*arg${ i }`);
+		file.write(`arg${ i }`);
 	}
 	writeArgumentConversion(file, i) {
-		file.line(`char** arg${ i } = XS->toStringHandle(the, mxArgv(${ i }));`);
+		file.line(`txInteger arg${ i }_len = XS->getStringLength(the, mxArgv(${ i }));`);
+		file.line(`char* arg${ i } = malloc(arg${ i }_len + 1);`);
+		file.line(`XS->toStringCopy(the, mxArgv(${ i }), arg${ i }, arg${ i }_len + 1);`);
+	}
+	writeArgumentCleanup(file, i) {
+		file.line(`free(arg${ i });`);
 	}
 	writeResultConversion(file) {
 		if (this.name.startsWith("const ")) {
@@ -432,6 +447,10 @@ class FFIGlue {
 			file.write(`);\n`);
 			
 			signature.resultType.writeResultConversion(file);
+			for (let i = 0; i < length; i++) {
+				if (signature.argumentTypes[i].writeArgumentCleanup)
+					signature.argumentTypes[i].writeArgumentCleanup(file, i);
+			}
 			file.tab(-1);
 			file.line(`}`);
 			file.line();

@@ -132,21 +132,78 @@ DEFINE_SYSCALL(int64_t, sys_moddable_xs_toBigInt64, txMachine *the, txSlot *slot
 DEFINE_SYSCALL(void, sys_moddable_xs_fromBigUint64, txMachine *the, txSlot *slot, uint64_t value) { prv_check_machine(the); fxFromBigUint64(the, slot, value); }
 DEFINE_SYSCALL(uint64_t, sys_moddable_xs_toBigUint64, txMachine *the, txSlot *slot) { prv_check_machine(the); return fxToBigUint64(the, slot); }
 
-// Strings and ArrayBuffers expose pointers into the privileged moddable heap
-// that user code would dereference. Until that ABI is redesigned (copy-out
-// into a user buffer, or backing storage in unprivileged-readable memory)
-// these abort with a clear log.
+// Strings and ArrayBuffers: the from* entries take a user-space source pointer
+// (from malloc in the generated mc.ffi.c), validate it, then fall through to
+// the kernel-side fx* which copies into XS-managed storage. The copy-out
+// to* entries are the inverse — XS string/buffer into a user-space dst.
+// toStringHandle / toArrayBufferHandle would return pointers into the
+// privileged moddable heap; left stubbed since the new codegen prefers the
+// copy variants.
+extern txInteger fxGetStringLength(txMachine *the, txSlot *slot);
+extern void fxStringCopy(txMachine *the, txSlot *slot, char *dst, txInteger cap);
+extern void fxArrayBufferCopy(txMachine *the, txSlot *slot, void *dst, txInteger cap);
+
 static void prv_unsupported(txMachine *the, const char *name)
 {
-	APP_LOG(APP_LOG_LEVEL_ERROR, "XS FFI: %s not yet supported from unprivileged FFI", name);
-	PBL_LOG_ERR("XS FFI: %s not yet supported", name);
+	APP_LOG(APP_LOG_LEVEL_ERROR, "XS FFI: %s not supported from unprivileged FFI; use copy variants", name);
+	PBL_LOG_ERR("XS FFI: %s not supported", name);
 	fxAbort(the, XS_UNHANDLED_EXCEPTION_EXIT);
 }
 
-DEFINE_SYSCALL(void, sys_moddable_xs_fromString, txMachine *the, txSlot *slot, char *value) { prv_check_machine(the); (void)slot; (void)value; prv_unsupported(the, "fromString"); }
-DEFINE_SYSCALL(void, sys_moddable_xs_fromStringX, txMachine *the, txSlot *slot, char *value) { prv_check_machine(the); (void)slot; (void)value; prv_unsupported(the, "fromStringX"); }
+DEFINE_SYSCALL(void, sys_moddable_xs_fromString, txMachine *the, txSlot *slot, char *value)
+{
+	prv_check_machine(the);
+	// Source string lives in user heap; validate the first byte. fxString's
+	// strlen + copy walks until NUL — if the buffer extends past mapped
+	// memory the kernel fault handler kills the app. TODO: bounded strnlen.
+	syscall_assert_userspace_buffer(value, 1);
+	fxString(the, slot, value);
+}
+
+DEFINE_SYSCALL(void, sys_moddable_xs_fromStringX, txMachine *the, txSlot *slot, char *value)
+{
+	prv_check_machine(the);
+	syscall_assert_userspace_buffer(value, 1);
+	fxStringX(the, slot, value);
+}
+
+DEFINE_SYSCALL(void *, sys_moddable_xs_fromArrayBuffer, txMachine *the, txSlot *slot, void *data, txInteger byteLength, txInteger maxByteLength)
+{
+	prv_check_machine(the);
+	if (byteLength > 0)
+		syscall_assert_userspace_buffer(data, byteLength);
+	return fxArrayBuffer(the, slot, data, byteLength, maxByteLength);
+}
+
+DEFINE_SYSCALL(txInteger, sys_moddable_xs_getStringLength, txMachine *the, txSlot *slot)
+{
+	prv_check_machine(the);
+	return fxGetStringLength(the, slot);
+}
+
+DEFINE_SYSCALL(void, sys_moddable_xs_toStringCopy, txMachine *the, txSlot *slot, char *dst, txInteger cap)
+{
+	prv_check_machine(the);
+	if (cap > 0)
+		syscall_assert_userspace_buffer(dst, cap);
+	fxStringCopy(the, slot, dst, cap);
+}
+
+DEFINE_SYSCALL(txInteger, sys_moddable_xs_getArrayBufferLength, txMachine *the, txSlot *slot)
+{
+	prv_check_machine(the);
+	return fxGetArrayBufferLength(the, slot);
+}
+
+DEFINE_SYSCALL(void, sys_moddable_xs_toArrayBufferCopy, txMachine *the, txSlot *slot, void *dst, txInteger cap)
+{
+	prv_check_machine(the);
+	if (cap > 0)
+		syscall_assert_userspace_buffer(dst, cap);
+	fxArrayBufferCopy(the, slot, dst, cap);
+}
+
 DEFINE_SYSCALL(char **, sys_moddable_xs_toStringHandle, txMachine *the, txSlot *slot) { prv_check_machine(the); (void)slot; prv_unsupported(the, "toStringHandle"); return NULL; }
-DEFINE_SYSCALL(void *, sys_moddable_xs_fromArrayBuffer, txMachine *the, txSlot *slot, void *data, txInteger byteLength, txInteger maxByteLength) { prv_check_machine(the); (void)slot; (void)data; (void)byteLength; (void)maxByteLength; prv_unsupported(the, "fromArrayBuffer"); return NULL; }
 DEFINE_SYSCALL(void **, sys_moddable_xs_toArrayBufferHandle, txMachine *the, txSlot *slot, size_t size) { prv_check_machine(the); (void)slot; (void)size; prv_unsupported(the, "toArrayBufferHandle"); return NULL; }
 
 void FFI_constructor(xsMachine* the)
@@ -192,6 +249,10 @@ void FFI_constructor(xsMachine* the)
 	api->toStringHandle = sys_moddable_xs_toStringHandle;
 	api->fromArrayBuffer = sys_moddable_xs_fromArrayBuffer;
 	api->toArrayBufferHandle = sys_moddable_xs_toArrayBufferHandle;
+	api->getStringLength = sys_moddable_xs_getStringLength;
+	api->toStringCopy = sys_moddable_xs_toStringCopy;
+	api->getArrayBufferLength = sys_moddable_xs_getArrayBufferLength;
+	api->toArrayBufferCopy = sys_moddable_xs_toArrayBufferCopy;
 
 	s_ffi_binding_count = 0;
 	(fxBuildFFI)(the, api);

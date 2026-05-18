@@ -79,9 +79,18 @@ struct sxAPI {
 	void (*fromString)(txMachine* the, txSlot* slot, char* value);
 	void (*fromStringX)(txMachine* the, txSlot* slot, char* value);
 	char** (*toStringHandle)(txMachine* the, txSlot* slot);
-	
+
 	void* (*fromArrayBuffer)(txMachine* the, txSlot* slot, void* data, txInteger byteLength, txInteger maxByteLength);
 	void** (*toArrayBufferHandle)(txMachine* the, txSlot* slot, size_t size);
+
+	// Copy-based string/buffer accessors. Use these when the FFI body runs in
+	// a different address space from the runtime (e.g. unprivileged Pebble
+	// apps where the moddable heap is privileged-only). The codegen prefers
+	// these over toStringHandle/toArrayBufferHandle.
+	txInteger (*getStringLength)(txMachine* the, txSlot* slot);
+	void (*toStringCopy)(txMachine* the, txSlot* slot, char* dst, txInteger cap);
+	txInteger (*getArrayBufferLength)(txMachine* the, txSlot* slot);
+	void (*toArrayBufferCopy)(txMachine* the, txSlot* slot, void* dst, txInteger cap);
 };
 
 #if mxWindows

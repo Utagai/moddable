@@ -47,6 +47,34 @@ char** fxToStringHandle(txMachine* the, txSlot* slot)
 	return &(slot->value.string);
 }
 
+txInteger fxGetStringLength(txMachine* the, txSlot* slot)
+{
+	fxToString(the, slot);
+	return (txInteger)c_strlen(slot->value.string);
+}
+
+void fxStringCopy(txMachine* the, txSlot* slot, char* dst, txInteger cap)
+{
+	fxToString(the, slot);
+	if (cap <= 0) return;
+	txInteger len = (txInteger)c_strlen(slot->value.string);
+	if (len >= cap) len = cap - 1;
+	c_memcpy(dst, slot->value.string, len);
+	dst[len] = 0;
+}
+
+void fxArrayBufferCopy(txMachine* the, txSlot* slot, void* dst, txInteger cap)
+{
+	fxToArrayBuffer(the, slot);
+	txSlot* arrayBuffer = slot->value.reference->next;
+	txSlot* bufferInfo = arrayBuffer->next;
+	if (arrayBuffer->value.arrayBuffer.address == C_NULL)
+		mxTypeError("detached buffer");
+	txInteger len = (txInteger)bufferInfo->value.bufferInfo.length;
+	if (cap < len) len = cap;
+	c_memcpy(dst, arrayBuffer->value.arrayBuffer.address, len);
+}
+
 extern txAPI gxAPI;
 txAPI gxAPI = {
 	fxThis,
@@ -60,23 +88,28 @@ txAPI gxAPI = {
 	fxDefineID,
 	fxID,
 	fxNewHostFunction,
-	
+
 	fxFromBigInt64,
 	fxFromBigUint64,
 	fxInteger,
 	fxNumber,
 	fxUnsigned,
-	
+
 	fxToBigInt64,
 	fxToBigUint64,
 	fxToInteger,
 	fxToNumber,
 	fxToUnsigned,
-	
+
 	fxString,
 	fxStringX,
 	fxToStringHandle,
-	
+
 	fxArrayBuffer,
 	fxToArrayBufferHandle,
+
+	fxGetStringLength,
+	fxStringCopy,
+	fxGetArrayBufferLength,
+	fxArrayBufferCopy,
 };
