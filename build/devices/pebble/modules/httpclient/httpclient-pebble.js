@@ -135,8 +135,9 @@ class HTTPClient {
 			onReadable: () => {
 				trace("onReadable enter; about to read()\n");
 				const message = state.messages.read();
-				trace("finished onReadable read()\n");
 				const id = message.get("id");
+				trace(`finished onReadable read(); got client ID ${id}; # of clients: ${state.clients.length}\n`);
+				trace(`message.get() dump: id=${id}, BASE+6=${message.get(BASE + 6)}, BASE+7=${message.get(BASE + 7)}, BASE+8=${message.get(BASE + 8)}, BASE+9=${message.get(BASE + 9)}, BASE+11=${message.get(BASE + 11)}\n`);
 				for (let i = 0, clients = state.clients; i < clients.length; i++) {
 					if (clients[i].#current?.id === id)
 						return clients[i].#read(message);
