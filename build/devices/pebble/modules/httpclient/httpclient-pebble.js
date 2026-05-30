@@ -279,6 +279,7 @@ class HTTPClient {
 						current.headers = [];
 					}
 					current.statusText = message.get(BASE + 11);
+					trace(`[httpclient] receiveStatus got status=${current.status} statusText=${JSON.stringify(current.statusText)}\n`);
 					break;
 
 					case "receiveHeaders": {
@@ -308,6 +309,7 @@ class HTTPClient {
 
 					case "receiveBody": {
 						const fragment = message.get(BASE + 8);
+						trace(`[httpclient] receiveBody got fragment byteLength=${fragment?.byteLength}\n`);
 						if (fragment) {
 							fragment.position = 0;
 							current.response.push(fragment);
