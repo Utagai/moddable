@@ -293,6 +293,7 @@ class HTTPClient {
 						const map = new Map;
 						trace(`[httpclient] receiveHeaders got headers:\n${JSON.stringify(headers)}\n`);
 						headers.split("\n").forEach(header => {
+							if (!header) return;
 							const [key, value] = header.split(":");
 							trace(`[httpclient] header key=${JSON.stringify(key)} value=${JSON.stringify(value)} undefined?=${undefined === value}\n`);
 							map.set(key, value);
