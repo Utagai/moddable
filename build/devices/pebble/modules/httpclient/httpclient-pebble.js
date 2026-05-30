@@ -295,6 +295,7 @@ class HTTPClient {
 						delete current.headers;
 						const map = new Map;
 						trace(`[httpclient] receiveHeaders got headers:\n${JSON.stringify(headers)}\n`);
+						trace(`[httpclient] receiveStatus message index values: status=${message.get(BASE + 6)}, text=${message.get(BASE+11)}\n`);
 						headers.split("\n").forEach(header => {
 							if (!header) return;
 							const [key, value] = header.split(":");
@@ -312,6 +313,7 @@ class HTTPClient {
 					case "receiveBody": {
 						const fragment = message.get(BASE + 8);
 						trace(`[httpclient] receiveBody got fragment byteLength=${fragment?.byteLength}\n`);
+						trace(`[httpclient] receiveHeaders message index values: ${message.get(BASE + 7)}\n`);
 						if (fragment) {
 							fragment.position = 0;
 							current.response.push(fragment);
