@@ -283,6 +283,7 @@ class HTTPClient {
 					}
 					current.statusText = message.get(BASE + 11);
 					trace(`[httpclient] receiveStatus got status=${current.status} statusText=${JSON.stringify(current.statusText)}\n`);
+					trace(`[httpclient] receiveHeaders message index values: ${message.get(BASE+7)}`);
 					break;
 
 					case "receiveHeaders": {
@@ -297,6 +298,7 @@ class HTTPClient {
 						const map = new Map;
 						trace(`[httpclient] receiveHeaders got headers:\n${JSON.stringify(headers)}\n`);
 						trace(`[httpclient] receiveStatus message index values: status=${message.get(BASE + 6)}, text=${message.get(BASE+11)}\n`);
+						trace(`[httpclient] receiveBody message index values: ${message.get(BASE + 8)}\n`);
 						headers.split("\n").forEach(header => {
 							if (!header) return;
 							const [key, value] = header.split(":");
