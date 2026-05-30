@@ -45,6 +45,9 @@ class Message extends Native("xs_appmessage_destructor") {
 			}
 		}
 		trace(`[message.read] final map size=${map.size} keys=[${Array.from(map.keys()).map(k => JSON.stringify(k)).join(", ")}]\n`);
+		if (map.has(15007)) {
+			trace(`[message.read] has 15007; value: ${map.get(15007)}\n`);
+		}
 		return map;
 	}
 	write(map) {
