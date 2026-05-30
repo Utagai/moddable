@@ -291,6 +291,7 @@ class HTTPClient {
 						let headers = current.headers.join("");
 						delete current.headers;
 						const map = new Map;
+						trace(`[httpclient] receiveHeaders got headers:\n${JSON.stringify(headers)}\n`);
 						headers.split("\n").forEach(header => {
 							const [key, value] = header.split(":");
 							trace(`[httpclient] header key=${JSON.stringify(key)} value=${JSON.stringify(value)} undefined?=${undefined === value}\n`);
