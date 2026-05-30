@@ -293,8 +293,10 @@ class HTTPClient {
 						const map = new Map;
 						headers.split("\n").forEach(header => {
 							const [key, value] = header.split(":");
+							trace(`[httpclient] header key=${JSON.stringify(key)} value=${JSON.stringify(value)} undefined?=${undefined === value}\n`);
 							map.set(key, value);
 						});
+						trace(`[httpclient] receiveHeaders done — map.size=${map.size} has('')?=${map.has("")} val=''=${JSON.stringify(map.get(""))}\n`);
 						current.onHeaders?.call(current.request, current.status, map, current.statusText);
 						this.#state = "receiveBody";
 						current.response = [];

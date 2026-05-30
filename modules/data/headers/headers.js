@@ -29,6 +29,7 @@ class Headers extends Map {
 		return super.has(key.toString().toLowerCase());
 	}
 	set(key, value) {
+		trace(`[Headers.set] key=${JSON.stringify(key)} value=${JSON.stringify(value)} typeof=${typeof value}\n`);
 		return super.set(key.toString().toLowerCase(), value.toString());
 	}
 }
