@@ -133,7 +133,9 @@ class HTTPClient {
 			input: bufferSize,
 			output: bufferSize,
 			onReadable: () => {
+				trace("onReadable enter; about to read()\n");
 				const message = state.messages.read();
+				trace("finished onReadable read()\n");
 				const id = message.get("id");
 				for (let i = 0, clients = state.clients; i < clients.length; i++) {
 					if (clients[i].#current?.id === id)
