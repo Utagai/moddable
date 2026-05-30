@@ -144,7 +144,7 @@ class HTTPClient {
 				state.writable = true;
 				for (let i = 0, clients = state.clients; i < clients.length; i++) {
 					if (clients[i].#current) {
-						trace(`ME! Writable id=${clients[i].#current.id}\n`);
+						// trace(`ME! Writable id=${clients[i].#current.id}\n`);
 						clients[i].#write();
 						if (!state.writable)
 							return;
