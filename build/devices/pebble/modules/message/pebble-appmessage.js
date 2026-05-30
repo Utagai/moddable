@@ -34,14 +34,17 @@ class Message extends Native("xs_appmessage_destructor") {
 
 	read() {
 		const {keys, map} = native("xs_appmessage_read").call(this);
+		trace(`[message.read] keys map size=${keys?.size ?? 0}\n`);
 		if (keys) {
 			for (const [key, code] of keys.entries()) {
+				trace(`[message.read] checking key=${JSON.stringify(key)} code=${code} has=${map.has(code)} val=${map.has(code) ? JSON.stringify(map.get(code)) : "N/A"}\n`);
 				if (map.has(code)) {
 					map.set(key, map.get(code));
 					map.delete(code);
 				}
 			}
 		}
+		trace(`[message.read] final map size=${map.size} keys=[${Array.from(map.keys()).map(k => JSON.stringify(k)).join(", ")}]\n`);
 		return map;
 	}
 	write(map) {
